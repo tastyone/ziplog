@@ -3,14 +3,17 @@ var url = require('url'),
     crypto = require('crypto');
     ziplog = require('./lib/ziplog');
 
-ziplog.connect("mongodb://localhost/ziplog");
+require('date-utils');
 
 /* set env variables */
+var mongo_connect_string = process.env.MONGO_CONNECT || "mongodb://localhost/ziplog";
 var scheme = process.env.SCHEME || "http";
 var domain = process.env.DOMAIN || "go.kr";
 var port = process.env.PORT || 8080;
 var cookie_name = process.env.COOKIE || 'ziplog_key';
 var is_production = process.env.PRODUCTION || 0;
+
+ziplog.connect(mongo_connect_string);
 
 var __log = null;
 if ( is_production == 1 ) {
@@ -109,6 +112,41 @@ app.post('/api/zip', function (req, res) {
 //     }
 //   });
 // });
+
+app.get('/api/stats/visitors', function(req, res) {
+  var p_hash = req.param('hash');
+
+  var p_date = req.param('date');
+  var p_from = req.param('from');
+  var p_to= req.param('to');
+
+  __log('p_hash, ', p_hash);
+  if ( p_date ) {
+    p_from = p_date;
+    p_to = p_date;
+  }
+  var d_start = new Date(p_from);
+  var d_until = new Date(p_to).addDays(1);
+  __log('start, ', d_start);
+  __log('until, ', d_until);
+
+  ziplog.stats_visitors(p_hash, p_from, p_to, function(err, count) {
+    if ( err ) {
+      var out = {err: err};
+      var body = JSON.stringify(out);
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Length', body.length);
+      res.end(body);
+      return;
+    }
+
+    var out = {hash: p_hash, from: p_from, to: p_to, pv: count.pv, uv: count.uv};
+    var body = JSON.stringify(out);
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Length', body.length);
+    res.end(body);
+  });
+});
 
 app.get('*', function (req, res) {
   if (req.url === '/favicon.ico') {

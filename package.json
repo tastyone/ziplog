@@ -2,6 +2,7 @@
 	"name":"gokr",
 	"dependencies":{
 		"mongoose":"*",
-		"express":"*"
+		"express":"*",
+		"date-utils":"*"
 	}
 }
